@@ -23,10 +23,7 @@ To run the project:
    ```bash
    git clone https://github.com/your_username/summarize_pdf.git
    ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+2. Install dependencies
 3. Paste your API key in `get_summary.py`.
 4. Start MongoDB database locally.
 5. Run the project:
@@ -37,8 +34,6 @@ To run the project:
 ### Note
 Ensure all dependencies are installed and the MongoDB database is properly configured before running the project.
 
-## Contributors
-- [Your Name](https://github.com/your_username)
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
