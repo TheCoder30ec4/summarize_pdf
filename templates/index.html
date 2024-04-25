@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Upload</title>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <h2>Upload a PDF File</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="fileInput" name="file" accept=".pdf">
+        <button type="submit" id="uploadButton">Upload</button>
+    </form>
+
+    <div id="status"></div>
+
+    <div>
+        <h3>Metadata:</h3>
+        <p>Creator: {{ metadata.get('/Creator', 'N/A') }}</p>
+        <p>Creation Date: {{ metadata.get('/CreationDate', 'N/A') }}</p>
+        <p>Modification Date: {{ metadata.get('/ModDate', 'N/A') }}</p>
+        <div id="fileSize"></div>
+    </div>
+
+    <button id="summarizeButton" onclick="summarize()">Summarize</button>
+    <textarea id="summaryText" rows="10" cols="50" readonly></textarea>
+
+    <button id="saveButton" onclick="saveSummary()">Save</button>
+
+    <!-- Add an input field to capture PDF name -->
+    <input type="text" id="pdfName" placeholder="Enter PDF Name">
+
+    <!-- Container for displaying saved summaries -->
+    <div id="savedSummaries"></div>
+</div>
+
+<script>
+    // Function to fetch and display saved summaries
+    function displaySavedSummaries() {
+        $.ajax({
+            type: 'GET',
+            url: '/get-saved-summaries', // Flask route to fetch saved summaries
+            success: function(response) {
+                // Clear the existing content
+                $('#savedSummaries').empty();
+
+                // Iterate through the response and create cards or table rows
+                for (var i = 0; i < response.length; i++) {
+                    var summary = response[i];
+
+                    // Create a card or table row for each summary
+                    var cardHtml = '<div class="card">' +
+                        '<div class="card-body">' +
+                        '<h5 class="card-title">' + summary.pdfName + '</h5>' +
+                        '<p class="card-text">' + summary.summary + '</p>' +
+                        '<button class="btn btn-danger delete-btn" data-pdf-name="' + summary.pdfName + '">Delete</button>' +
+                        '</div>' +
+                        '</div>';
+
+                    // Append the card to the container
+                    $('#savedSummaries').append(cardHtml);
+                }
+
+                // Add event listener for delete buttons
+                $('.delete-btn').click(function() {
+                    var pdfName = $(this).data('pdf-name');
+                    deleteSummary(pdfName);
+                });
+            },
+            error: function() {
+                console.log('Error occurred while fetching saved summaries.');
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        $('#uploadForm').submit(function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            var formData = new FormData();
+            formData.append('file', $('#fileInput')[0].files[0]);
+
+            $.ajax({
+                type: 'POST',
+                url: '/',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    $('#status').text(response);
+
+                    // Display file size after successful upload
+                    var fileSize = ($('#fileInput')[0].files[0].size / 1024).toFixed(2) + ' KB';
+                    $('#fileSize').text('File Size: ' + fileSize);
+                },
+                error: function() {
+                    $('#status').text('Error occurred while uploading the file.');
+                }
+            });
+        });
+
+        // Call the function to display saved summaries when the page loads
+        displaySavedSummaries();
+    });
+
+    function summarize() {
+        var fileText = $('#summaryText').val(); // Get the text from textarea
+        $('#summaryText').addClass('loading'); // Add loading class to show spinner
+
+        $.ajax({
+            type: 'POST',
+            url: '/summarize',
+            data: { fileText: fileText },
+            success: function(response) {
+                $('#summaryText').removeClass('loading'); // Remove loading class
+                $('#summaryText').addClass('loaded'); // Add loaded class
+                $('#summaryText').val(response); // Display summary in textarea
+            },
+            error: function() {
+                $('#summaryText').removeClass('loading'); // Remove loading class
+                $('#summaryText').addClass('loaded'); // Add loaded class
+                $('#summaryText').val('Error occurred while summarizing.'); // Display error message in textarea
+            }
+        });
+    }
+
+    function saveSummary() {
+        var summaryText = $('#summaryText').val(); // Get the summary text from textarea
+        var pdfName = $('#pdfName').val(); // Get the PDF name from input field
+
+        // Validate if PDF name is provided
+        if(pdfName.trim() === '') {
+            alert('Please enter a PDF name.');
+            return;
+        }
+
+        // Validate if summary text is available
+        if(summaryText.trim() === '') {
+            alert('Summary is empty. Please summarize before saving.');
+            return;
+        }
+
+        $.ajax({
+            type: 'POST',
+            url: '/save-summary',
+            data: { pdfName: pdfName, summaryText: summaryText }, // Send PDF name and summary text
+            success: function(response) {
+                alert('Summary saved successfully!');
+                // Refresh the saved summaries after saving
+                displaySavedSummaries();
+            },
+            error: function() {
+                alert('Error occurred while saving summary.');
+            }
+        });
+    }
+
+    function deleteSummary(pdfName) {
+        $.ajax({
+            type: 'POST',
+            url: '/delete-summary',
+            data: { pdfName: pdfName },
+            success: function(response) {
+                alert('Summary deleted successfully!');
+                // Refresh the saved summaries after deletion
+                displaySavedSummaries();
+            },
+            error: function() {
+                alert('Error occurred while deleting summary.');
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
