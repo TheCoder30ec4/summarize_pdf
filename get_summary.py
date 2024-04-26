@@ -3,7 +3,7 @@ from pdfToText import extract_text_from_pdf
 
 
 
-genai.configure(api_key="AIzaSyC4nAG6tfRuEjHPi32cmuI6ePY1oLPFg_4") 
+genai.configure(api_key="Your API") 
 
 # Set up the model
 generation_config = {
